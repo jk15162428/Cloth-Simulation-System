@@ -10,8 +10,8 @@
 #include "stb_image.h"
 
 /** constant variable **/
-const int WIDTH = 1600;
-const int HEIGHT = 900;
+const int WIDTH = 800;
+const int HEIGHT = 800;
 const std::string TEXTURE_PATH = "textures/cloth1.jpg";
 const std::string TEXTURE2_PATH = "textures/tex1.jpg";
 const std::string CLOTH_VERTEX_PATH = "shaders/cloth.vs";

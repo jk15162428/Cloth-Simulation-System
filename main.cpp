@@ -14,8 +14,8 @@
 // WIDTH and HEIGHT are set in renderer.h
 const double TIME_STEP = 1.0 / 60.0;
 const glm::vec3 backgroundColor(50.0 / 255, 50.0 / 255, 60.0 / 255);
-const glm::vec3 ClothPosition(-2, 5, -4);
-const glm::vec2 ClothSize(4, 10);
+const glm::vec3 ClothPosition(-2.5, 5, -4);
+const glm::vec2 ClothSize(5, 10);
 const glm::vec2 ClothNodesNumber(60, 90); // (w, h)
 /** end of constant variable **/
 
