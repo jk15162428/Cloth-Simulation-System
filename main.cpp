@@ -14,7 +14,7 @@
 // WIDTH and HEIGHT are set in renderer.h
 const double TIME_STEP = 1.0 / 60.0;
 const glm::vec3 backgroundColor(50.0 / 255, 50.0 / 255, 60.0 / 255);
-const glm::vec3 ClothPosition(-2, 5, -2);
+const glm::vec3 ClothPosition(-2, 5, -4);
 const glm::vec2 ClothSize(4, 10);
 const glm::vec2 ClothNodesNumber(60, 90); // (w, h)
 /** end of constant variable **/
@@ -104,10 +104,10 @@ int main(int argc, const char* argv[])
             for (int i = 0; i < 4; i++) output.pop_back(); // only display 2 precision
             output += " ms per frame";
         }
-        textRenderer.RenderText(output, 25.0f, 25.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+        textRenderer.RenderText(output, 25.0f, HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
         if (isRunning > 0) isRunning--;
         /* end of post-frame time logic **/
-
+        
         glfwSwapBuffers(window);
         glfwPollEvents(); // Update the status of window
     }
