@@ -26,7 +26,7 @@ public:
 		try
 		{
 			std::cout << "Try to read sources from \"" << vertexFilePath << "\" and \""
-				<< fragmentFilePath << "\"" << std::endl;
+					  << fragmentFilePath << "\"" << std::endl;
 			vertexShaderFile.open(vertexFilePath);
 			fragmentShaderFile.open(fragmentFilePath);
 			std::stringstream vertexShaderStream, fragmentShaderStream;
@@ -69,11 +69,11 @@ public:
 		checkCompileAndLinkErrors(ID, "LINK");
 
 		std::cout << "Shader created successfully, shader program ID: " << ID << std::endl;
+		/** End of compile shader **/
 
 		// Clean shaders and use program.
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
-		/** End of compile shader **/
 	}
 
 	void use() { glUseProgram(ID); }
@@ -98,7 +98,6 @@ public:
 	{
 		glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y);
 	}
-	// ------------------------------------------------------------------------
 	void setVec3(const std::string& name, const glm::vec3& value) const
 	{
 		glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
@@ -107,7 +106,6 @@ public:
 	{
 		glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
 	}
-	// ------------------------------------------------------------------------
 	void setVec4(const std::string& name, const glm::vec4& value) const
 	{
 		glUniform4fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
@@ -116,17 +114,14 @@ public:
 	{
 		glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
 	}
-	// ------------------------------------------------------------------------
 	void setMat2(const std::string& name, const glm::mat2& mat) const
 	{
 		glUniformMatrix2fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
 	}
-	// ------------------------------------------------------------------------
 	void setMat3(const std::string& name, const glm::mat3& mat) const
 	{
 		glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
 	}
-	// ------------------------------------------------------------------------
 	void setMat4(const std::string& name, const glm::mat4& mat) const
 	{
 		glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);

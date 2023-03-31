@@ -139,6 +139,7 @@
   <ItemGroup>
     <Image Include="textures\cloth1.jpg" />
     <Image Include="textures\cloth2.jpg" />
+    <Image Include="textures\cloth3.jpg" />
     <Image Include="textures\tex1.jpg" />
     <Image Include="textures\wall.jpg" />
   </ItemGroup>
@@ -146,11 +147,9 @@
     <ClInclude Include="headers\camera.h" />
     <ClInclude Include="headers\cloth.h" />
     <ClInclude Include="headers\constraint.h" />
-    <ClInclude Include="headers\mesh.h" />
     <ClInclude Include="headers\renderer.h" />
     <ClInclude Include="headers\shader.h" />
     <ClInclude Include="headers\stb_image.h" />
-    <ClInclude Include="headers\vertex.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -160,6 +159,9 @@
     <None Include="shaders\light.vs" />
     <None Include="shaders\text.fs" />
     <None Include="shaders\text.vs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="fonts\arial.ttf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

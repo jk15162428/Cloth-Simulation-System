@@ -12,8 +12,8 @@
 /** constant variable **/
 const int WIDTH = 800;
 const int HEIGHT = 800;
-const std::string TEXTURE_PATH = "textures/cloth1.jpg";
-const std::string TEXTURE2_PATH = "textures/tex1.jpg";
+const std::string TEXTURE_PATH = "textures/cloth5.jpg";
+const std::string TEXTURE2_PATH = "textures/cloth5.jpg";
 const std::string CLOTH_VERTEX_PATH = "shaders/cloth.vs";
 const std::string CLOTH_FRAGMENT_PATH = "shaders/cloth.fs";
 const std::string TEXT_VERTEX_PATH = "shaders/text.vs";
@@ -53,7 +53,8 @@ public:
 	void init(Cloth* cloth)
 	{
 		NodeCount = (int)(cloth->Faces.size());
-		if (NodeCount <= 0) {
+		if (NodeCount <= 0) 
+		{
 			std::cout << "ERROR::ClothRender : No node exists." << std::endl;
 			exit(-1);
 		}
@@ -155,7 +156,6 @@ public:
 		// View Matrix : The camera
 		glUniformMatrix4fv(glGetUniformLocation(ShaderProgramID, "view"), 1, GL_FALSE, &camera.GetViewMatrix()[0][0]);
 
-		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		// setting drawmode
@@ -173,7 +173,6 @@ public:
 		}
 
 		// End of rendering
-		// glDisable(GL_BLEND);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 		glUseProgram(0);
@@ -337,18 +336,17 @@ int loadTexture(const std::string texturePath)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	/** Load image and configure texture **/
-	// stbi_set_flip_vertically_on_load(true); // upside down
+	// stbi_set_flip_vertically_on_load(true); // upside down if necessary
 	int texWidth, texHeight, colorChannels; // After loading the image, stb_image will fill them
 	std::cout << "Try to load texture: " << texturePath.c_str() << std::endl;
 	unsigned char* data = stbi_load(texturePath.c_str(), &texWidth, &texHeight, &colorChannels, 0);
-	if (data) {
+	if (data) 
+	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 		// Automatically generate all the required mipmaps for the currently bound texture.
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
-	else {
-		std::cout << "Failed to load texture" << std::endl;
-	}
+	else { std::cout << "Failed to load texture" << std::endl; }
 	// Always free image memory
 	stbi_image_free(data);
 	std::cout << "Texture loaded successfully, Texture ID: " << texture << std::endl;
