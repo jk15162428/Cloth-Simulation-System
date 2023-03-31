@@ -44,7 +44,7 @@ int main(int argc, const char* argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Try to create a GLFW window
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "XPBD", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Cloth Simulation", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create a GLFW window." << std::endl;
