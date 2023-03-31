@@ -21,5 +21,5 @@
 * glTools
 * freetype
 
-Note: **opengl32.lib**、**glfw3.lib** and **freetype.lib** should be linked, and besides including corresponding library, you should also add **glad.c** into your project.
+Note: **opengl32.lib**, **glfw3.lib** and **freetype.lib** should be linked, and besides including corresponding library, you should also add **glad.c** into your project.
 
