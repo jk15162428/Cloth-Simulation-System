@@ -1,3 +1,12 @@
+#### Usage
+* Escape/ESC: Exit
+* W, A, S, D: move camera
+* P: Execute/Pause the simulation
+* T: Step 1 time, this key will unconditionally pause the simulation
+* Z, X, C: Switch the render mode as DRAW_NODES, DRAW_LINES and DRAW_FACES
+* R: Reset the scene
+* Up, Down, Left, Right: Adding force to the cloth.
+
 #### Environment
 
 * Windows 10
