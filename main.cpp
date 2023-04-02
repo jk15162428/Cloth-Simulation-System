@@ -12,17 +12,21 @@
 
 /** constant variable **/
 // WIDTH and HEIGHT are set in renderer.h
-const double TIME_STEP = 1.0 / 60.0;
+const double TIME_STEP = 1.0 / 30.0;
 const glm::vec3 backgroundColor(50.0 / 255, 50.0 / 255, 60.0 / 255);
-const glm::vec3 ClothPosition(-2.5, 5, -4);
+const glm::vec3 ClothPosition(-2.5, 6, -4);
 const glm::vec2 ClothSize(5, 10);
 const glm::vec2 ClothNodesNumber(60, 90); // (w, h)
+const int TOTAL_FRAME = 999999; // used for certain frame simulation
+const float FONT_SIZE = 25;
 /** end of constant variable **/
 
 /** global variable **/
-int ClothIteration = 10;
-int isRunning = 1;
-Cloth cloth(ClothPosition, ClothSize, ClothNodesNumber, ClothIteration);
+MethodEnum Method = PBD;
+int ClothIteration = 15;
+bool Record = false; // true means after TOTAL_FRAME, the simulation will stop immediately
+int isRunning = Record ? TOTAL_FRAME : 1;
+Cloth cloth(ClothPosition, ClothSize, ClothNodesNumber, Method, ClothIteration);
 ClothRenderer clothRenderer;
 TextRenderer textRenderer;
 /** end of constant variable **/
@@ -65,7 +69,7 @@ int main(int argc, const char* argv[])
     CallBackFunctionsInit(window);
 
     clothRenderer.init(&cloth);
-    textRenderer.init(30);
+    textRenderer.init(FONT_SIZE);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -74,7 +78,8 @@ int main(int argc, const char* argv[])
 
     GLdouble subTimeStep = TIME_STEP / cloth.Iteration;
     std::string output;
-    float currentFrame, lastFrame, deltaTime;
+    float currentFrame, lastFrame, deltaTime; // count every frame time
+    float beginTime = static_cast<float>(glfwGetTime()), endTime, averageTime; // count total simulation time
     while (!glfwWindowShouldClose(window)) 
     {
         /** per-frame time logic **/
@@ -86,6 +91,7 @@ int main(int argc, const char* argv[])
         /** simulating & rendering **/
         if (isRunning)
         {
+            cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE / 10.0); // for record
             for (int subStep = 0; subStep < cloth.Iteration; subStep++) {
                 cloth.Integrate(subTimeStep);
             }
@@ -106,11 +112,20 @@ int main(int argc, const char* argv[])
         }
         textRenderer.RenderText(output, 25.0f, HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
         if (isRunning > 0) isRunning--;
+        if (Record && isRunning == 0)
+        {
+            endTime = static_cast<float>(glfwGetTime());
+            averageTime = (endTime - beginTime) / TOTAL_FRAME;
+            printf("The total simulation time of %d frames is: %.2f ms, average time per frame is: %.2f ms", TOTAL_FRAME, (endTime - beginTime) * 1000, averageTime * 1000);
+            break;
+        }
         /* end of post-frame time logic **/
-        
+
         glfwSwapBuffers(window);
         glfwPollEvents(); // Update the status of window
     }
+    while (Record);
+
     glfwTerminate();
 	return 0;
 }
@@ -181,39 +196,47 @@ void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods
 
         // R: reset the scene and perform 1 render loop
         case GLFW_KEY_R:
-            cloth.reset();
-            isRunning = 0;
-            clothRenderer.ClothObject = &cloth;
-            glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            clothRenderer.render();
-            glfwSwapBuffers(window);
-            glfwPollEvents();
+            if (action == GLFW_PRESS)
+            {
+                cloth.reset();
+                if (!Record)
+                {
+                    isRunning = 0;
+                    clothRenderer.ClothObject = &cloth;
+                    glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, 1.0);
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                    clothRenderer.render();
+                    glfwSwapBuffers(window);
+                    glfwPollEvents();
+                }
+                else
+                    isRunning = TOTAL_FRAME;
+            }
             break;
 
         // up, down, left and right will pull the cloth with certain force.
         case GLFW_KEY_UP:
             if (action == GLFW_PRESS)
             {
-                cloth.UpdateVelocity(VEL_UP);
+                cloth.UpdateVelocity(VEL_FRONT);
             }
             break;
         case GLFW_KEY_DOWN:
             if (action == GLFW_PRESS)
             {
-                cloth.UpdateVelocity(VEL_DOWN);
+                cloth.UpdateVelocity(VEL_BACK);
             }
             break;
         case GLFW_KEY_LEFT:
             if (action == GLFW_PRESS)
             {
-                cloth.UpdateVelocity(VEL_LEFT);
+                cloth.UpdateVelocity(VEL_LEFT_AND_UP);
             }
             break;
         case GLFW_KEY_RIGHT:
             if (action == GLFW_PRESS)
             {
-                cloth.UpdateVelocity(VEL_RIGHT);
+                cloth.UpdateVelocity(VEL_RIGHT_AND_UP);
             }
             break;
 

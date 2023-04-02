@@ -147,6 +147,7 @@
     <ClInclude Include="headers\camera.h" />
     <ClInclude Include="headers\cloth.h" />
     <ClInclude Include="headers\constraint.h" />
+    <ClInclude Include="headers\method.h" />
     <ClInclude Include="headers\renderer.h" />
     <ClInclude Include="headers\shader.h" />
     <ClInclude Include="headers\stb_image.h" />

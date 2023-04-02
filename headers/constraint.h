@@ -1,5 +1,6 @@
 #pragma once
 #include "node.h"
+#include "method.h"
 
 // for PBD and XPBD
 class Constraint
@@ -34,7 +35,7 @@ public:
 	GLdouble GetStiffness() { return Stiffness; }
 	GLdouble SetStiffness(GLdouble s) { Stiffness = s; }
 
-	void Solve(GLdouble dt)
+	void Solve(GLdouble dt, MethodEnum method)
 	{
 		GLdouble invMass1 = Node1->InvMass, invMass2 = Node2->InvMass;
 		if (invMass1 + invMass2 == 0.0f) return;
@@ -43,13 +44,15 @@ public:
 		if (dist == 0.0f) return;
 		GLdouble constraint = dist - RestLength; // C_j(x)
 		glm::vec<3, double> deltaPosition;
-		GLdouble alpha = Compliance / dt / dt; // \tilde{alpha}
-		// Note: zero compliance for cloth
-		GLdouble deltaLambda = (-constraint - alpha * Lambda) / ((invMass1 + invMass2) + alpha); // equation (18)
-		deltaPosition = deltaLambda * p2_to_p1 / dist; // equation (17), M^{-1} is provided later.
-		Lambda += deltaLambda;
-		// for PBD, TODO: finish this
-		// else { p2_to_p1.normalize();  deltaPosition = stiffness * p2_to_p1 * -constraint / (invMass1 + invMass2); }
+		if (method == XPBD) // XPBD
+		{
+			GLdouble alpha = Compliance / (dt * dt); // \tilde{alpha}
+			// Note: zero compliance for cloth
+			GLdouble deltaLambda = (-constraint - alpha * Lambda) / ((invMass1 + invMass2) + alpha); // equation (18)
+			deltaPosition = deltaLambda * p2_to_p1 / (dist + FLT_EPSILON); // equation (17), M^{-1} is provided later.
+			Lambda += deltaLambda;
+		} // for PBD, TODO: finish this
+		else { p2_to_p1 = glm::normalize(p2_to_p1);  deltaPosition = Stiffness * p2_to_p1 * -constraint / (invMass1 + invMass2); }
 		Node1->Position += (invMass1 * deltaPosition);
 		Node2->Position += (-invMass2 * deltaPosition);
 	}

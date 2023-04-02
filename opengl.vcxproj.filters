@@ -61,6 +61,9 @@
     <ClInclude Include="headers\renderer.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="headers\method.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\cloth.fs" />

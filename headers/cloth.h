@@ -5,13 +5,16 @@
 #include <random>
 #include "node.h"
 #include "constraint.h"
+#include "method.h"
 
 enum VelocityUpdate 
 {
+	VEL_FRONT,
+	VEL_BACK,
 	VEL_UP,
 	VEL_DOWN,
-	VEL_LEFT,
-	VEL_RIGHT
+	VEL_LEFT_AND_UP,
+	VEL_RIGHT_AND_UP
 };
 
 class Cloth
@@ -19,7 +22,6 @@ class Cloth
 private:
 	const GLdouble DEFAULT_INVMASS = 5.0;
 	const GLdouble BENDING_CONSTRAINT = 1.0;
-	const GLdouble FORCE = 1.0; // used in velocity update with keyboard
 	const glm::vec<3, GLdouble> gravity = glm::vec<3, GLdouble>(0.0, -10.0, 0.0);
 
 public:
@@ -27,6 +29,8 @@ public:
 	glm::vec<3, GLdouble> ClothPosition;
 	int Width, Height;
 	int NodesInWidth, NodesInHeight;
+	MethodEnum Method = XPBD;
+	const GLdouble DEFAULT_FORCE = 1.0; // used in velocity update with keyboard
 
 	enum DrawModeEnum 
 	{
@@ -40,13 +44,14 @@ public:
 	std::vector<Constraint> Constraints; // for PBD & XPBD
 	std::vector<Node*> Faces; // for rendering
 
-	Cloth(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, int iteration = 5)
+	Cloth(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, MethodEnum method, int iteration = 5)
 	{
 		ClothPosition = position;
 		Width = size.x;
 		Height = size.y;
 		NodesInWidth = nodesNumber.x;
 		NodesInHeight = nodesNumber.y;
+		Method = method;
 		Iteration = iteration;
 		init();
 	}
@@ -95,10 +100,13 @@ public:
 				continue;
 			Nodes[i]->Integrate(dt);
 		}
-		for (int i = 0; i < Constraints.size(); i++)
+		if (Method == XPBD || Method == PBD) 
 		{
-			Constraints[i].SetLambda(0.0f);
-			Constraints[i].Solve(dt);
+			for (int i = 0; i < Constraints.size(); i++)
+			{
+				Constraints[i].SetLambda(0.0f);
+				Constraints[i].Solve(dt, Method);
+			}
 		}
 		for (int i = 0; i < Nodes.size(); i++)
 		{
@@ -111,26 +119,33 @@ public:
 	glm::vec<3, GLdouble> getWorldPos(Node* n) { return ClothPosition + n->Position; }
 	void setWorldPos(Node* n, glm::vec<3, GLdouble> position) { n->Position = position - ClothPosition; }
 	void reset() { Destroy();  init(); }
-	void UpdateVelocity(VelocityUpdate update)
+	void UpdateVelocity(VelocityUpdate update, GLdouble force = -1.0)
 	{
+		if (force < 0) force = DEFAULT_FORCE;
 		for (int i = 0; i < Nodes.size(); i++)
 		{
 			if (Nodes[i]->InvMass == 0) continue;
 			switch (update)
 			{
 				case VEL_UP:
-					Nodes[i]->Velocity.z += FORCE * Nodes[i]->InvMass;
+					Nodes[i]->Velocity.y += force * Nodes[i]->InvMass;
 					break;
 				case VEL_DOWN:
-					Nodes[i]->Velocity.z -= FORCE * Nodes[i]->InvMass;
+					Nodes[i]->Velocity.y -= force * Nodes[i]->InvMass;
 					break;
-				case VEL_LEFT:
-					Nodes[i]->Velocity.x -= FORCE * Nodes[i]->InvMass;
-					Nodes[i]->Velocity.z -= FORCE * Nodes[i]->InvMass / 100;
+				case VEL_FRONT:
+					Nodes[i]->Velocity.z += force * Nodes[i]->InvMass;
 					break;
-				case VEL_RIGHT:
-					Nodes[i]->Velocity.x += FORCE * Nodes[i]->InvMass;
-					Nodes[i]->Velocity.z -= FORCE * Nodes[i]->InvMass / 100;
+				case VEL_BACK:
+					Nodes[i]->Velocity.z -= force * Nodes[i]->InvMass;
+					break;
+				case VEL_LEFT_AND_UP:
+					Nodes[i]->Velocity.x -= force * Nodes[i]->InvMass;
+					Nodes[i]->Velocity.z -= force * Nodes[i]->InvMass / 100;
+					break;
+				case VEL_RIGHT_AND_UP:
+					Nodes[i]->Velocity.x += force * Nodes[i]->InvMass;
+					Nodes[i]->Velocity.z -= force * Nodes[i]->InvMass / 100;
 					break;
 			}
 		}
