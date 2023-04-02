@@ -9,26 +9,34 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H  
 #include "headers/renderer.h"
+#if __has_include(<FreeImage.h>)
+#define FREEIMAGE
+#include <FreeImage.h>
+#endif
+
 
 /** constant variable **/
 // WIDTH and HEIGHT are set in renderer.h
-const double TIME_STEP = 1.0 / 30.0;
+const double TIME_STEP = 1.0 / 60.0;
 const glm::vec3 backgroundColor(50.0 / 255, 50.0 / 255, 60.0 / 255);
 const glm::vec3 ClothPosition(-2.5, 6, -4);
 const glm::vec2 ClothSize(5, 10);
-const glm::vec2 ClothNodesNumber(60, 90); // (w, h)
-const int TOTAL_FRAME = 999999; // used for certain frame simulation
+const glm::vec2 ClothNodesNumber(90, 90); // (w, h)
+const int TOTAL_FRAME = 1000; // used for certain frame simulation
+const bool Record = false; // true means after TOTAL_FRAME, the simulation will stop immediately
+const bool showTime = false; // whether to show time on the left up corner
 const float FONT_SIZE = 25;
 /** end of constant variable **/
 
 /** global variable **/
-MethodEnum Method = PBD;
-int ClothIteration = 15;
-bool Record = false; // true means after TOTAL_FRAME, the simulation will stop immediately
+MethodEnum Method = XPBD;
+int ClothIteration = 20;
 int isRunning = Record ? TOTAL_FRAME : 1;
 Cloth cloth(ClothPosition, ClothSize, ClothNodesNumber, Method, ClothIteration);
 ClothRenderer clothRenderer;
 TextRenderer textRenderer;
+std::string RECORD_SAVE_PATH = "C:/Users/jk151/Desktop/实验结果/实验1. 调整迭代步数与时间步长/result";
+int photoCount = 1;
 /** end of constant variable **/
 
 /** function statement **/
@@ -76,22 +84,24 @@ int main(int argc, const char* argv[])
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glPointSize(3);
 
+    std::string outputFrameTime, outputTotalTime;
     GLdouble subTimeStep = TIME_STEP / cloth.Iteration;
-    std::string output;
     float currentFrame, lastFrame, deltaTime; // count every frame time
     float beginTime = static_cast<float>(glfwGetTime()), endTime, averageTime; // count total simulation time
+    cloth.UpdateVelocity(VEL_FRONT, cloth.DEFAULT_FORCE);
     while (!glfwWindowShouldClose(window)) 
     {
         /** per-frame time logic **/
         glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, 1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        lastFrame = static_cast<float>(glfwGetTime());
+        if (showTime)
+            lastFrame = static_cast<float>(glfwGetTime());
         /** end of per-frame time logic **/
-
+        
         /** simulating & rendering **/
         if (isRunning)
         {
-            cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE / 10.0); // for record
+            cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE / 4.0);
             for (int subStep = 0; subStep < cloth.Iteration; subStep++) {
                 cloth.Integrate(subTimeStep);
             }
@@ -102,16 +112,25 @@ int main(int argc, const char* argv[])
         /** end of simulating & rendering **/
         
         /** post-frame time logic **/
-        currentFrame = static_cast<float>(glfwGetTime());
-        deltaTime = currentFrame - lastFrame;
-        if (isRunning != 0)
+        /** display time**/
+        if (showTime)
         {
-            output = std::to_string(deltaTime * 1000);
-            for (int i = 0; i < 4; i++) output.pop_back(); // only display 2 precision
-            output += " ms per frame";
+            currentFrame = static_cast<float>(glfwGetTime());
+            deltaTime = currentFrame - lastFrame;
+
+            if (!Record && isRunning != 0)
+            {
+                outputFrameTime = std::to_string(deltaTime * 1000);
+                for (int i = 0; i < 4; i++) outputFrameTime.pop_back(); // only display 2 precision
+                outputFrameTime += " ms per frame";
+            }
+            textRenderer.RenderText(outputFrameTime, 25.0f, HEIGHT - 40.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
+            endTime = static_cast<float>(glfwGetTime());
+            outputTotalTime = std::to_string(endTime);
+            for (int i = 0; i < 4; i++) outputTotalTime.pop_back(); // only display 2 precision
+            outputTotalTime += "s in total.";
+            textRenderer.RenderText(outputTotalTime, 25.0f, HEIGHT - 80.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
         }
-        textRenderer.RenderText(output, 25.0f, HEIGHT - 50.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f));
-        if (isRunning > 0) isRunning--;
         if (Record && isRunning == 0)
         {
             endTime = static_cast<float>(glfwGetTime());
@@ -119,13 +138,14 @@ int main(int argc, const char* argv[])
             printf("The total simulation time of %d frames is: %.2f ms, average time per frame is: %.2f ms", TOTAL_FRAME, (endTime - beginTime) * 1000, averageTime * 1000);
             break;
         }
+        /** end of display time**/
+        
+        if (isRunning > 0) isRunning--;
         /* end of post-frame time logic **/
 
         glfwSwapBuffers(window);
         glfwPollEvents(); // Update the status of window
     }
-    while (Record);
-
     glfwTerminate();
 	return 0;
 }
@@ -239,7 +259,23 @@ void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods
                 cloth.UpdateVelocity(VEL_RIGHT_AND_UP);
             }
             break;
-
+        // press M to make a photo
+#ifdef FREEIMAGE
+        case GLFW_KEY_M:
+            if (action == GLFW_PRESS)
+            {
+                BYTE* pixels = new BYTE[3 * WIDTH * HEIGHT]; // BGR
+                glReadPixels(0, 0, WIDTH, HEIGHT, GL_BGR, GL_UNSIGNED_BYTE, pixels);
+                // Convert to FreeImage format & save to file
+                FIBITMAP* image = FreeImage_ConvertFromRawBits(pixels, WIDTH, HEIGHT, 3 * WIDTH, 24, 0x0000FF, 0xFF0000, 0x00FF00, false);
+                std::string photoName = RECORD_SAVE_PATH + std::to_string(photoCount) + ".png";
+                FreeImage_Save(FIF_PNG, image, photoName.c_str(), 0);
+                photoCount++;
+                // Free resources
+                FreeImage_Unload(image);
+                delete[] pixels;
+            }
+#endif
     };
 }
 void framebufferSizeCallBack(GLFWwindow* window, int width, int height)
