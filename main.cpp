@@ -22,7 +22,7 @@ const glm::vec3 ClothPosition(-8, 9, -4);
 const glm::vec2 ClothSize(16, 16);
 const int TOTAL_FRAME = 400; // used for certain frame simulation
 const bool Record = false; // true means after TOTAL_FRAME, the simulation will stop immediately
-const bool showTime = false; // whether to show time on the left up corner
+const bool showTime = true; // whether to show time on the left up corner
 const float FONT_SIZE = 25;  // displayed UI font size
 const int GLFW_INTERVAL = 0; // set interval if needed
 /** end of constant variable **/
@@ -30,6 +30,9 @@ const int GLFW_INTERVAL = 0; // set interval if needed
 /** global variable **/
 MethodClass Method = M_PPBD_SS;
 int isRunning = Record ? TOTAL_FRAME : -1;
+glm::vec2 ClothNodesNumber = Method.MethodClothNodesNumber;
+int ClothIteration = Method.MethodIteration;
+int constraintLevel; // 0: no bending constraint, 1: only diagonal bending constraint, 2: only edge bending constraint, 3: all bending constraint
 Cloth cloth;
 ClothRenderer clothRenderer;
 TextRenderer textRenderer;
@@ -82,6 +85,10 @@ int main(int argc, const char* argv[])
     {
         camera.Zoom = 40.0f;
     }
+    ClothNodesNumber = Method.MethodClothNodesNumber;
+    ClothIteration = Method.MethodIteration;
+    constraintLevel = 3;
+
     Init();
     clothRenderer.init(&cloth);
     textRenderer.init(FONT_SIZE);
@@ -97,6 +104,7 @@ int main(int argc, const char* argv[])
     float beginTime = static_cast<float>(glfwGetTime()), endTime, averageTime; // count total simulation time
     int simulationFrame = 0;
     glfwSwapInterval(GLFW_INTERVAL);
+    cloth.UpdateVelocity(VEL_BACK, cloth.DEFAULT_FORCE * 0.02);
     while (!glfwWindowShouldClose(window)) 
     {
         /** per-frame time logic **/
@@ -109,8 +117,11 @@ int main(int argc, const char* argv[])
         /** simulating & rendering **/
         if (isRunning)
         {
-            if (simulationFrame % 20 == 0) cloth.UpdateVelocity(VEL_BACK, cloth.DEFAULT_FORCE); // make the cloth has y velocity
-            cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE * 0.1);
+            if (Record)
+            {
+                if (simulationFrame % 20 == 0) cloth.UpdateVelocity(VEL_BACK, cloth.DEFAULT_FORCE); // make the cloth has y velocity
+                cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE * 0.1);
+            }
             switch (Method.getId())
             {
                 case PPBD:
@@ -173,10 +184,9 @@ int main(int argc, const char* argv[])
 // Init cloth and other things using input and default value
 void Init()
 {
-    glm::vec2 ClothNodesNumber = Method.MethodClothNodesNumber;
-    int ClothIteration = Method.MethodIteration;
 
-    cloth.set(ClothPosition, ClothSize, ClothNodesNumber, Method.getId(), ClothIteration);
+
+    cloth.set(ClothPosition, ClothSize, ClothNodesNumber, Method.getId(), ClothIteration, constraintLevel);
 }
 
 // Register callback functions

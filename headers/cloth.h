@@ -32,6 +32,7 @@ public:
 	int NodesInWidth, NodesInHeight;
 	MethodEnum Method = PPBD;
 	const GLdouble DEFAULT_FORCE = 1.0; // used in velocity update with keyboard
+	int ConstraintLevel;
 
 	enum DrawModeEnum 
 	{
@@ -46,7 +47,7 @@ public:
 	std::vector<Node*> Faces; // for rendering
 
 	Cloth() {}
-	Cloth(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, MethodEnum method, int iteration = 5)
+	Cloth(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, MethodEnum method, int iteration = 5, int constraintLevel = 3)
 	{
 		ClothPosition = position;
 		Width = size.x;
@@ -55,10 +56,11 @@ public:
 		NodesInHeight = nodesNumber.y;
 		Method = method;
 		Iteration = iteration;
+		ConstraintLevel = constraintLevel;
 		init();
 	}
 	// just a dummy version of copy constructor
-	void set(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, MethodEnum method, int iteration = 5)
+	void set(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, MethodEnum method, int iteration = 5, int constraintLevel = 3)
 	{
 		ClothPosition = position;
 		Width = size.x;
@@ -67,6 +69,7 @@ public:
 		NodesInHeight = nodesNumber.y;
 		Method = method;
 		Iteration = iteration;
+		ConstraintLevel = constraintLevel;
 		init();
 	}
 	~Cloth()
@@ -254,17 +257,26 @@ private:
 			}
 		}
 		// Bending constraints
-		for (int w = 0; w < NodesInWidth; w++)
+		if (constraintLevel > 0)
 		{
-			for (int h = 0; h < NodesInHeight; h++)
+			for (int w = 0; w < NodesInWidth; w++)
 			{
-				if (w < NodesInWidth - 2) { MakeConstraint(getNode(w, h), getNode(w + 2, h), BENDING_COMPLIANCE); }
-				if (h < NodesInHeight - 2) { MakeConstraint(getNode(w, h), getNode(w, h + 2), BENDING_COMPLIANCE); }
-				
-				if (w < NodesInWidth - 2 && h < NodesInHeight - 2)
+				for (int h = 0; h < NodesInHeight; h++)
 				{
-					MakeConstraint(getNode(w, h), getNode(w + 2, h + 2), BENDING_COMPLIANCE);
-					MakeConstraint(getNode(w + 2, h), getNode(w, h + 2), BENDING_COMPLIANCE);
+					if (ConstraintLevel != 2)
+					{
+						if (w < NodesInWidth - 2) { MakeConstraint(getNode(w, h), getNode(w + 2, h), BENDING_COMPLIANCE); }
+						if (h < NodesInHeight - 2) { MakeConstraint(getNode(w, h), getNode(w, h + 2), BENDING_COMPLIANCE); }
+					}
+
+					if (ConstraintLevel != 1)
+					{
+						if (w < NodesInWidth - 2 && h < NodesInHeight - 2)
+						{
+							MakeConstraint(getNode(w, h), getNode(w + 2, h + 2), BENDING_COMPLIANCE);
+							MakeConstraint(getNode(w + 2, h), getNode(w, h + 2), BENDING_COMPLIANCE);
+						}
+					}
 				}
 			}
 		}
