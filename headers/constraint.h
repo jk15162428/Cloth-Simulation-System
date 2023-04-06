@@ -2,7 +2,7 @@
 #include "node.h"
 #include "method.h"
 
-// for PBD and XPBD
+// for PBD and PPBD
 class Constraint
 {
 private:
@@ -10,8 +10,8 @@ private:
 	Node* Node1;
 	Node* Node2;
 	GLdouble    Stiffness;   // for PBD (0.0f - 1.0f)
-	GLdouble    Compliance;  // for XPBD
-	GLdouble    Lambda;      // for XPBD
+	GLdouble    Compliance;  // for PPBD
+	GLdouble    Lambda;      // for PPBD
 
 public:
 	Constraint(Node* n1, Node* n2) :
@@ -23,7 +23,7 @@ public:
 	}
 	Constraint(Node* n1, Node* n2, GLdouble compliance) :
 		RestLength(0.0f), Node1(n1), Node2(n2),
-		Stiffness(0.1f), Lambda(0.0f)
+		Stiffness(0.2f), Lambda(0.0f)
 	{
 		glm::vec3 n1_to_n2 = Node2->Position - Node1->Position;
 		RestLength = glm::length(n1_to_n2);
@@ -44,15 +44,24 @@ public:
 		if (dist == 0.0f) return;
 		GLdouble constraint = dist - RestLength; // C_j(x)
 		glm::vec<3, double> deltaPosition;
-		if (method == XPBD) // XPBD
+		GLdouble deltaLambda, alpha;
+		switch (method)
 		{
-			GLdouble alpha = Compliance / (dt * dt); // \tilde{alpha}
-			// Note: zero compliance for cloth
-			GLdouble deltaLambda = (-constraint - alpha * Lambda) / ((invMass1 + invMass2) + alpha); // equation (18)
-			deltaPosition = deltaLambda * p2_to_p1 / (dist + FLT_EPSILON); // equation (17), M^{-1} is provided later.
-			Lambda += deltaLambda;
-		} // for PBD, TODO: finish this
-		else { p2_to_p1 = glm::normalize(p2_to_p1);  deltaPosition = Stiffness * p2_to_p1 * -constraint / (invMass1 + invMass2); }
+			case PPBD: // trivial PPBD
+				alpha = Compliance / (dt * dt); // \tilde{alpha}
+				// Note: zero compliance for cloth
+				deltaLambda = (-constraint - alpha * Lambda) / ((invMass1 + invMass2) + alpha); // equation (18)
+				deltaPosition = deltaLambda * p2_to_p1 / (dist + FLT_EPSILON); // equation (17)
+				Lambda += deltaLambda;
+				break;
+			case PBD:
+				p2_to_p1 = glm::normalize(p2_to_p1);  deltaPosition = Stiffness * p2_to_p1 * -constraint / (invMass1 + invMass2);
+				break;
+			case PPBD_SS: // PPBD with small step, lambda is set to 0.0 every step, so no lambda at all
+				alpha = Compliance / (dt * dt); // \tilde{alpha}
+				deltaLambda = -constraint / ((invMass1 + invMass2) + alpha);
+				deltaPosition = deltaLambda * p2_to_p1 / (dist + FLT_EPSILON);
+		}
 		Node1->Position += (invMass1 * deltaPosition);
 		Node2->Position += (-invMass2 * deltaPosition);
 	}

@@ -15,10 +15,10 @@ public:
 	glm::vec2 TextureCoord;
 	glm::vec<3, GLdouble> Normal;         // for shading
 
-	/** for XPBD **/
+	/** for PPBD **/
 	GLdouble InvMass;			          // inverse mass, i.e. w = 1 / mass
 	glm::vec<3, GLdouble> OldPosition;
-	/** end of for XPBD **/
+	/** end of for PPBD **/
 
 	Node() {}
 	Node(GLdouble invMass, glm::vec<3, GLdouble> position, glm::vec<3, GLdouble> acceleration = glm::vec<3, GLdouble>(0.0f, 0.0f, 0.0f))
@@ -32,11 +32,4 @@ public:
 		OldPosition = Position;
 	}
 	~Node() {}
-
-	void Integrate(GLdouble dt)
-	{
-		Velocity += Acceleration * dt;
-		OldPosition = Position;
-		Position += Velocity * dt;
-	}
 };

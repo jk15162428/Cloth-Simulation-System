@@ -26,7 +26,7 @@ int loadTexture(const std::string texturePath);
 class Light
 {
 public:
-	glm::vec3 Position = glm::vec3(-5.0f, 7.0f, -5.0f);
+	glm::vec3 Position = glm::vec3(-2.5f, 10.0f, -10.0f);
 	glm::vec3 Color = glm::vec3(0.7f, 0.7f, 1.0f);
 };
 Light sun;

@@ -14,37 +14,36 @@
 #include <FreeImage.h>
 #endif
 
-
 /** constant variable **/
 // WIDTH and HEIGHT are set in renderer.h
 const double TIME_STEP = 1.0 / 60.0;
 const glm::vec3 backgroundColor(50.0 / 255, 50.0 / 255, 60.0 / 255);
-const glm::vec3 ClothPosition(-2.5, 6, -4);
-const glm::vec2 ClothSize(5, 10);
-const glm::vec2 ClothNodesNumber(90, 90); // (w, h)
-const int TOTAL_FRAME = 1000; // used for certain frame simulation
+const glm::vec3 ClothPosition(-8, 9, -4);
+const glm::vec2 ClothSize(16, 16);
+const int TOTAL_FRAME = 400; // used for certain frame simulation
 const bool Record = false; // true means after TOTAL_FRAME, the simulation will stop immediately
 const bool showTime = false; // whether to show time on the left up corner
-const float FONT_SIZE = 25;
+const float FONT_SIZE = 25;  // displayed UI font size
+const int GLFW_INTERVAL = 0; // set interval if needed
 /** end of constant variable **/
 
 /** global variable **/
-MethodEnum Method = XPBD;
-int ClothIteration = 20;
-int isRunning = Record ? TOTAL_FRAME : 1;
-Cloth cloth(ClothPosition, ClothSize, ClothNodesNumber, Method, ClothIteration);
+MethodClass Method = M_PPBD_SS;
+int isRunning = Record ? TOTAL_FRAME : -1;
+Cloth cloth;
 ClothRenderer clothRenderer;
 TextRenderer textRenderer;
-std::string RECORD_SAVE_PATH = "C:/Users/jk151/Desktop/实验结果/实验1. 调整迭代步数与时间步长/result";
+std::string RECORD_SAVE_PATH = "C:/Users/jk151/Desktop/实验结果/实验1. 调整迭代步数与时间步长/";
 int photoCount = 1;
 /** end of constant variable **/
 
 /** function statement **/
+void Init();
 void CallBackFunctionsInit(GLFWwindow* window);
 void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebufferSizeCallBack(GLFWwindow* window, int width, int height);
 void scrollCallBack(GLFWwindow* window, double xoffset, double yoffset);
-int loadTexture(const std::string texturePath);
+void savePicture();
 /** end of function statement **/
 
 int main(int argc, const char* argv[]) 
@@ -76,6 +75,14 @@ int main(int argc, const char* argv[])
     // Register all callback functions
     CallBackFunctionsInit(window);
 
+    // TODO:input
+
+    // set camera to appropriate position
+    if (!showTime)
+    {
+        camera.Zoom = 40.0f;
+    }
+    Init();
     clothRenderer.init(&cloth);
     textRenderer.init(FONT_SIZE);
 
@@ -88,22 +95,34 @@ int main(int argc, const char* argv[])
     GLdouble subTimeStep = TIME_STEP / cloth.Iteration;
     float currentFrame, lastFrame, deltaTime; // count every frame time
     float beginTime = static_cast<float>(glfwGetTime()), endTime, averageTime; // count total simulation time
-    cloth.UpdateVelocity(VEL_FRONT, cloth.DEFAULT_FORCE);
+    int simulationFrame = 0;
+    glfwSwapInterval(GLFW_INTERVAL);
     while (!glfwWindowShouldClose(window)) 
     {
         /** per-frame time logic **/
         glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, 1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if (showTime)
-            lastFrame = static_cast<float>(glfwGetTime());
+            lastFrame = static_cast<float>(glfwGetTime());  
         /** end of per-frame time logic **/
         
         /** simulating & rendering **/
         if (isRunning)
         {
-            cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE / 4.0);
-            for (int subStep = 0; subStep < cloth.Iteration; subStep++) {
-                cloth.Integrate(subTimeStep);
+            if (simulationFrame % 20 == 0) cloth.UpdateVelocity(VEL_BACK, cloth.DEFAULT_FORCE); // make the cloth has y velocity
+            cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE * 0.1);
+            switch (Method.getId())
+            {
+                case PPBD:
+                case PBD:
+                    cloth.Integrate(TIME_STEP);
+                    break;
+                case PPBD_SS:
+                    for (int subStep = 0; subStep < cloth.Iteration; subStep++) 
+                    {
+                        cloth.Integrate(subTimeStep);
+                    }
+                    break;
             }
             cloth.computeNormal();
         }
@@ -118,7 +137,7 @@ int main(int argc, const char* argv[])
             currentFrame = static_cast<float>(glfwGetTime());
             deltaTime = currentFrame - lastFrame;
 
-            if (!Record && isRunning != 0)
+            if (isRunning != 0)
             {
                 outputFrameTime = std::to_string(deltaTime * 1000);
                 for (int i = 0; i < 4; i++) outputFrameTime.pop_back(); // only display 2 precision
@@ -135,12 +154,14 @@ int main(int argc, const char* argv[])
         {
             endTime = static_cast<float>(glfwGetTime());
             averageTime = (endTime - beginTime) / TOTAL_FRAME;
-            printf("The total simulation time of %d frames is: %.2f ms, average time per frame is: %.2f ms", TOTAL_FRAME, (endTime - beginTime) * 1000, averageTime * 1000);
+            printf("The total simulation time of %d frames is: %.2f ms, average time per frame is: %.2f ms\n", TOTAL_FRAME, (endTime - beginTime) * 1000, averageTime * 1000);
+            savePicture();
             break;
         }
         /** end of display time**/
         
         if (isRunning > 0) isRunning--;
+        simulationFrame++;
         /* end of post-frame time logic **/
 
         glfwSwapBuffers(window);
@@ -148,6 +169,14 @@ int main(int argc, const char* argv[])
     }
     glfwTerminate();
 	return 0;
+}
+// Init cloth and other things using input and default value
+void Init()
+{
+    glm::vec2 ClothNodesNumber = Method.MethodClothNodesNumber;
+    int ClothIteration = Method.MethodIteration;
+
+    cloth.set(ClothPosition, ClothSize, ClothNodesNumber, Method.getId(), ClothIteration);
 }
 
 // Register callback functions
@@ -219,6 +248,7 @@ void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods
             if (action == GLFW_PRESS)
             {
                 cloth.reset();
+                cloth.UpdateVelocity(VEL_BACK, cloth.DEFAULT_FORCE * 0.02);
                 if (!Record)
                 {
                     isRunning = 0;
@@ -237,43 +267,26 @@ void keyCallBack(GLFWwindow* window, int key, int scancode, int action, int mods
         // up, down, left and right will pull the cloth with certain force.
         case GLFW_KEY_UP:
             if (action == GLFW_PRESS)
-            {
                 cloth.UpdateVelocity(VEL_FRONT);
-            }
             break;
         case GLFW_KEY_DOWN:
             if (action == GLFW_PRESS)
-            {
                 cloth.UpdateVelocity(VEL_BACK);
-            }
             break;
         case GLFW_KEY_LEFT:
             if (action == GLFW_PRESS)
-            {
                 cloth.UpdateVelocity(VEL_LEFT_AND_UP);
-            }
             break;
         case GLFW_KEY_RIGHT:
             if (action == GLFW_PRESS)
-            {
                 cloth.UpdateVelocity(VEL_RIGHT_AND_UP);
-            }
             break;
-        // press M to make a photo
 #ifdef FREEIMAGE
+        // press M to screenshot
         case GLFW_KEY_M:
             if (action == GLFW_PRESS)
             {
-                BYTE* pixels = new BYTE[3 * WIDTH * HEIGHT]; // BGR
-                glReadPixels(0, 0, WIDTH, HEIGHT, GL_BGR, GL_UNSIGNED_BYTE, pixels);
-                // Convert to FreeImage format & save to file
-                FIBITMAP* image = FreeImage_ConvertFromRawBits(pixels, WIDTH, HEIGHT, 3 * WIDTH, 24, 0x0000FF, 0xFF0000, 0x00FF00, false);
-                std::string photoName = RECORD_SAVE_PATH + std::to_string(photoCount) + ".png";
-                FreeImage_Save(FIF_PNG, image, photoName.c_str(), 0);
-                photoCount++;
-                // Free resources
-                FreeImage_Unload(image);
-                delete[] pixels;
+                savePicture();
             }
 #endif
     };
@@ -285,4 +298,26 @@ void framebufferSizeCallBack(GLFWwindow* window, int width, int height)
 void scrollCallBack(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+void savePicture()
+{
+    BYTE* pixels = new BYTE[3 * WIDTH * HEIGHT]; // BGR
+    glReadPixels(0, 0, WIDTH, HEIGHT, GL_BGR, GL_UNSIGNED_BYTE, pixels);
+    // Convert to FreeImage format & save to file
+    FIBITMAP* image = FreeImage_ConvertFromRawBits(pixels, WIDTH, HEIGHT, 3 * WIDTH, 24, 0x0000FF, 0xFF0000, 0x00FF00, false);
+    std::string folderPath = RECORD_SAVE_PATH + "methods=" + Method.getName();
+    if (!std::filesystem::exists(folderPath))
+        std::filesystem::create_directory(folderPath);
+    folderPath += "/dt=" + std::to_string((int)round(1 / TIME_STEP));
+    folderPath += " iteration=" + std::to_string(cloth.Iteration);
+    if (!std::filesystem::exists(folderPath))
+        std::filesystem::create_directory(folderPath);
+    std::string photoPrefix = "/" + Method.getName() + " dt=" + std::to_string((int)round(1 / TIME_STEP)) + " iteration=" + std::to_string(cloth.Iteration);
+    std::string photoName = folderPath + photoPrefix + " " + std::to_string(photoCount) + ".png";
+    FreeImage_Save(FIF_PNG, image, photoName.c_str(), 0);
+    std::cout << "Save screenshot as " + photoName << std::endl;
+    photoCount++;
+    // Free resources
+    FreeImage_Unload(image);
+    delete[] pixels;
 }
