@@ -257,7 +257,7 @@ private:
 			}
 		}
 		// Bending constraints
-		if (constraintLevel > 0)
+		if (ConstraintLevel > 0)
 		{
 			for (int w = 0; w < NodesInWidth; w++)
 			{
