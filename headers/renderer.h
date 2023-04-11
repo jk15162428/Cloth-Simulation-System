@@ -74,7 +74,7 @@ public:
 		// Build render program
 		Shader clothShader(CLOTH_VERTEX_PATH.c_str(), CLOTH_FRAGMENT_PATH.c_str());
 		ShaderProgramID = clothShader.ID;
-		std::cout << "Cloth Shader Program ID: " << ShaderProgramID << std::endl;
+		// std::cout << "Cloth Shader Program ID: " << ShaderProgramID << std::endl;
 
 		/** binding and setting VAO and VBO **/
 		// 1. Bind VAO
@@ -102,7 +102,7 @@ public:
 		/** end of binding and setting VAO and VBO **/
 
 		Texture1 = loadTexture(TEXTURE_PATH);
-		Texture2 = loadTexture(TEXTURE2_PATH);
+		// Texture2 = loadTexture(TEXTURE2_PATH); // you can set another texture to mix it if necessary
 
 		// activate/use the shader before setting uniforms
 		clothShader.use();

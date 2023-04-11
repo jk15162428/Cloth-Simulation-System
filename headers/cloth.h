@@ -214,7 +214,7 @@ private:
 			}
 			//std::cout << std::endl;
 		}
-		printf("Actual cloth has %i nodes\n", Nodes.size());
+		// printf("Actual cloth has %i nodes\n", Nodes.size());
 	}
 
 	void initFaces()

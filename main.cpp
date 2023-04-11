@@ -22,17 +22,17 @@ const glm::vec3 ClothPosition(-8, 9, -4);
 const glm::vec2 ClothSize(16, 16);
 const int TOTAL_FRAME = 400; // used for certain frame simulation
 const bool Record = false; // true means after TOTAL_FRAME, the simulation will stop immediately
-const bool showTime = true; // whether to show time on the left up corner
+const bool showTime = false; // whether to show time on the left up corner
 const float FONT_SIZE = 25;  // displayed UI font size
 const int GLFW_INTERVAL = 0; // set interval if needed
 /** end of constant variable **/
 
 /** global variable **/
-MethodClass Method = M_PPBD_SS;
+MethodClass Method = M_PBD;
 int isRunning = Record ? TOTAL_FRAME : -1;
 glm::vec2 ClothNodesNumber = Method.MethodClothNodesNumber;
 int ClothIteration = Method.MethodIteration;
-int constraintLevel; // 0: no bending constraint, 1: only diagonal bending constraint, 2: only edge bending constraint, 3: all bending constraint
+int constraintLevel = 3; // 0: no bending constraint, 1: only diagonal bending constraint, 2: only edge bending constraint, 3: all bending constraint
 Cloth cloth;
 ClothRenderer clothRenderer;
 TextRenderer textRenderer;
@@ -52,6 +52,8 @@ void savePicture();
 int main(int argc, const char* argv[]) 
 {
     // Prepare for rendering
+    printf("******************************\n");
+    printf("Initializing OpenGL.\n");
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -77,7 +79,8 @@ int main(int argc, const char* argv[])
 
     // Register all callback functions
     CallBackFunctionsInit(window);
-
+    printf("OpenGL initialized with no error.\n");
+    printf("******************************\n");
     // TODO:input
 
     // set camera to appropriate position
@@ -85,13 +88,14 @@ int main(int argc, const char* argv[])
     {
         camera.Zoom = 40.0f;
     }
-    ClothNodesNumber = Method.MethodClothNodesNumber;
-    ClothIteration = Method.MethodIteration;
-    constraintLevel = 3;
 
     Init();
+    printf("******************************\n");
+    printf("Building shaders.\n");
     clothRenderer.init(&cloth);
     textRenderer.init(FONT_SIZE);
+    printf("Shaders built with no error.\n");
+    printf("******************************\n");
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -184,9 +188,12 @@ int main(int argc, const char* argv[])
 // Init cloth and other things using input and default value
 void Init()
 {
-
-
+    printf("******************************\n");
+    printf("Initializing the cloth.\n");
+    printf("");
     cloth.set(ClothPosition, ClothSize, ClothNodesNumber, Method.getId(), ClothIteration, constraintLevel);
+    printf("Cloth initialized with no error.\n");
+    printf("******************************\n");
 }
 
 // Register callback functions
