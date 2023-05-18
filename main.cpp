@@ -20,7 +20,7 @@ const double TIME_STEP = 1.0 / 60.0;
 const glm::vec3 backgroundColor(50.0 / 255, 50.0 / 255, 60.0 / 255);
 const glm::vec3 ClothPosition(-8, 9, -4);
 const glm::vec2 ClothSize(16, 16);
-const int TOTAL_FRAME = 400; // used for certain frame simulation
+const int TOTAL_FRAME = 1000; // used for certain frame simulation
 const bool Record = false; // true means after TOTAL_FRAME, the simulation will stop immediately
 const bool showTime = false; // whether to show time on the left up corner
 const float FONT_SIZE = 25;  // displayed UI font size
@@ -32,11 +32,10 @@ MethodClass Method = M_PBD;
 int isRunning = Record ? TOTAL_FRAME : -1;
 glm::vec2 ClothNodesNumber = Method.MethodClothNodesNumber;
 int ClothIteration = Method.MethodIteration;
-int constraintLevel = 3; // 0: no bending constraint, 1: only diagonal bending constraint, 2: only edge bending constraint, 3: all bending constraint
 Cloth cloth;
 ClothRenderer clothRenderer;
 TextRenderer textRenderer;
-std::string RECORD_SAVE_PATH = "C:/Users/jk151/Desktop/实验结果/实验1. 调整迭代步数与时间步长/";
+std::string RECORD_SAVE_PATH = "C:/Users/jk151/Desktop/实验结果/exp2. timestep/";
 int photoCount = 1;
 /** end of constant variable **/
 
@@ -100,7 +99,7 @@ int main(int argc, const char* argv[])
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glPointSize(3);
+    glPointSize(3); 
 
     std::string outputFrameTime, outputTotalTime;
     GLdouble subTimeStep = TIME_STEP / cloth.Iteration;
@@ -121,22 +120,21 @@ int main(int argc, const char* argv[])
         /** simulating & rendering **/
         if (isRunning)
         {
-            if (Record)
-            {
-                if (simulationFrame % 20 == 0) cloth.UpdateVelocity(VEL_BACK, cloth.DEFAULT_FORCE); // make the cloth has y velocity
-                cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE * 0.1);
-            }
+            //if (Record)
+            //{
+            //    if (simulationFrame % 20 == 0) cloth.UpdateVelocity(VEL_BACK, cloth.DEFAULT_FORCE); // make the cloth has y velocity
+            //    cloth.UpdateVelocity(VEL_DOWN, cloth.DEFAULT_FORCE * 0.1);
+            //}
             switch (Method.getId())
             {
-                case PPBD:
-                case PBD:
-                    cloth.Integrate(TIME_STEP);
-                    break;
                 case PPBD_SS:
                     for (int subStep = 0; subStep < cloth.Iteration; subStep++) 
                     {
                         cloth.Integrate(subTimeStep);
                     }
+                    break;
+                default:
+                    cloth.Integrate(TIME_STEP);
                     break;
             }
             cloth.computeNormal();
@@ -191,7 +189,7 @@ void Init()
     printf("******************************\n");
     printf("Initializing the cloth.\n");
     printf("");
-    cloth.set(ClothPosition, ClothSize, ClothNodesNumber, Method.getId(), ClothIteration, constraintLevel);
+    cloth.set(ClothPosition, ClothSize, Method);
     printf("Cloth initialized with no error.\n");
     printf("******************************\n");
 }
