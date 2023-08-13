@@ -2,7 +2,7 @@
 #include "node.h"
 #include "method.h"
 
-// for PBD and PPBD
+// for PBD and XPBD
 class Constraint
 {
 private:
@@ -10,8 +10,8 @@ private:
 	Node* Node1;
 	Node* Node2;
 	GLdouble    Stiffness;   // for PBD (0.0f - 1.0f)
-	GLdouble    Compliance;  // for PPBD
-	GLdouble    Lambda;      // for PPBD
+	GLdouble    Compliance;  // for XPBD
+	GLdouble    Lambda;      // for XPBD
 
 public:
 	Constraint(Node* n1, Node* n2) :
@@ -47,7 +47,7 @@ public:
 		GLdouble deltaLambda, alpha;
 		switch (method)
 		{
-			case PPBD: // trivial PPBD
+			case XPBD: // trivial XPBD
 				alpha = Compliance / (dt * dt); // \tilde{alpha}
 				// Note: zero compliance for cloth
 				deltaLambda = (-constraint - alpha * Lambda) / ((invMass1 + invMass2) + alpha); // equation (18)
@@ -57,7 +57,7 @@ public:
 			case PBD:
 				p2_to_p1 = glm::normalize(p2_to_p1);  deltaPosition = Stiffness * p2_to_p1 * -constraint / (invMass1 + invMass2);
 				break;
-			case PPBD_SS: // PPBD with small step, lambda is set to 0.0 every step, so no lambda at all
+			case XPBD_SS: // XPBD with small step, lambda is set to 0.0 every step, so no lambda at all
 				alpha = Compliance / (dt * dt); // \tilde{alpha}
 				deltaLambda = -constraint / ((invMass1 + invMass2) + alpha);
 				deltaPosition = deltaLambda * p2_to_p1 / (dist + FLT_EPSILON);

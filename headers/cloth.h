@@ -46,7 +46,7 @@ public:
 	DrawModeEnum drawMode = DRAW_FACES;
 
 	std::vector<Node*> Nodes;
-	std::vector<Constraint> Constraints; // for PBD & PPBD
+	std::vector<Constraint> Constraints; // for PBD & XPBD
 	std::vector<Spring*> Springs; // for mass-spring system
 	std::vector<Node*> Faces; // for rendering
 
@@ -116,7 +116,7 @@ public:
 	{
 		switch (Method.getId())
 		{
-		case PPBD:
+		case XPBD:
 		case PBD:
 			// n iterations
 			for (int i = 0; i < Nodes.size(); i++)
@@ -143,7 +143,7 @@ public:
 				Nodes[i]->Velocity = (Nodes[i]->Position - Nodes[i]->OldPosition) * 1.0 / dt;
 			}
 			break;
-		case PPBD_SS:
+		case XPBD_SS:
 			// only one iteration
 			for (int i = 0; i < Nodes.size(); i++)
 			{

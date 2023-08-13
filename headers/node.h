@@ -15,10 +15,10 @@ public:
 	glm::vec2 TextureCoord;
 	glm::vec<3, GLdouble> Normal;         // for shading
 
-	/** for PPBD **/
+	/** for XPBD **/
 	GLdouble InvMass;			          // inverse mass, i.e. w = 1 / mass
 	glm::vec<3, GLdouble> OldPosition;
-	/** end of for PPBD **/
+	/** end of for XPBD **/
 
 	/** for mass-spring system **/
 	glm::vec<3, double> Force;
