@@ -4,10 +4,11 @@
 #include <iostream>
 #include <random>
 #include "node.h"
+#include "spring.h"
 #include "constraint.h"
 #include "method.h"
 
-enum VelocityUpdate 
+enum VelocityUpdate
 {
 	VEL_FRONT,
 	VEL_BACK,
@@ -20,21 +21,23 @@ enum VelocityUpdate
 class Cloth
 {
 private:
-	const GLdouble DEFAULT_INVMASS = 5.0;
+	const GLdouble DEFAULT_INVMASS = 1.0;
 	const GLdouble DISTANCE_COMPLIANCE = 0.0;
 	const GLdouble BENDING_COMPLIANCE = 1.0;
 	const glm::vec<3, GLdouble> gravity = glm::vec<3, GLdouble>(0.0, -10.0, 0.0);
-
+	const double STRUCTURE_COEF = 1000.0;
+	const double SHEAR_COEF = 50.0;
+	const double BENDING_COEF = 400.0;
 public:
-	int Iteration; // substep in PPBD
+	int Iteration;
 	glm::vec<3, GLdouble> ClothPosition;
 	int Width, Height;
 	int NodesInWidth, NodesInHeight;
-	MethodEnum Method = PPBD;
-	const GLdouble DEFAULT_FORCE = 1.0; // used in velocity update with keyboard
+	MethodClass Method;
+	const GLdouble DEFAULT_FORCE = 5.0; // used in velocity update with keyboard
 	int ConstraintLevel;
 
-	enum DrawModeEnum 
+	enum DrawModeEnum
 	{
 		DRAW_NODES = 0,
 		DRAW_LINES = 1,
@@ -43,33 +46,34 @@ public:
 	DrawModeEnum drawMode = DRAW_FACES;
 
 	std::vector<Node*> Nodes;
-	std::vector<Constraint> Constraints; // for PBD & PPBD
+	std::vector<Constraint> Constraints; // for PBD & XPBD
+	std::vector<Spring*> Springs; // for mass-spring system
 	std::vector<Node*> Faces; // for rendering
 
 	Cloth() {}
-	Cloth(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, MethodEnum method, int iteration = 5, int constraintLevel = 3)
+	Cloth(glm::vec3 position, glm::vec2 size, MethodClass method)
 	{
 		ClothPosition = position;
 		Width = size.x;
 		Height = size.y;
-		NodesInWidth = nodesNumber.x;
-		NodesInHeight = nodesNumber.y;
+		NodesInWidth = method.MethodClothNodesNumber.x;
+		NodesInHeight = method.MethodClothNodesNumber.y;
 		Method = method;
-		Iteration = iteration;
-		ConstraintLevel = constraintLevel;
+		Iteration = method.MethodIteration;
+		ConstraintLevel = method.ConstraintLevel;
 		init();
 	}
 	// just a dummy version of copy constructor
-	void set(glm::vec3 position, glm::vec2 size, glm::vec2 nodesNumber, MethodEnum method, int iteration = 5, int constraintLevel = 3)
+	void set(glm::vec3 position, glm::vec2 size, MethodClass method)
 	{
 		ClothPosition = position;
 		Width = size.x;
 		Height = size.y;
-		NodesInWidth = nodesNumber.x;
-		NodesInHeight = nodesNumber.y;
+		NodesInWidth = method.MethodClothNodesNumber.x;
+		NodesInHeight = method.MethodClothNodesNumber.y;
 		Method = method;
-		Iteration = iteration;
-		ConstraintLevel = constraintLevel;
+		Iteration = method.MethodIteration;
+		ConstraintLevel = method.ConstraintLevel;
 		init();
 	}
 	~Cloth()
@@ -90,8 +94,8 @@ public:
 		for (int i = 0; i < Nodes.size(); i++)
 			Nodes[i]->Normal = normal;
 		/** Compute normal of each face **/
-		for (int i = 0; i < Faces.size() / 3; i++) 
-		{ 
+		for (int i = 0; i < Faces.size() / 3; i++)
+		{
 			// 3 nodes in each face
 			Node* n1 = Faces[3 * i + 0];
 			Node* n2 = Faces[3 * i + 1];
@@ -104,48 +108,121 @@ public:
 			n2->Normal += normal;
 			n3->Normal += normal;
 		}
-		for (int i = 0; i < Nodes.size(); i++) 
+		for (int i = 0; i < Nodes.size(); i++)
 			Nodes[i]->Normal = glm::normalize(Nodes[i]->Normal);
 	}
 
 	void Integrate(GLdouble dt)
 	{
-		/** Node **/
-		for (int i = 0; i < Nodes.size(); i++)
+		switch (Method.getId())
 		{
-			if (Nodes[i]->InvMass == 0.0)
-				continue;
-			Nodes[i]->Velocity += Nodes[i]->Acceleration * dt;
-			Nodes[i]->OldPosition = Nodes[i]->Position;
-			Nodes[i]->Position += Nodes[i]->Velocity * dt;
-		}
-		
-		if (Method == PPBD || Method == PBD) 
-		{
+		case XPBD:
+		case PBD:
+			// n iterations
+			for (int i = 0; i < Nodes.size(); i++)
+			{
+				if (Nodes[i]->InvMass == 0.0)
+					continue;
+				Nodes[i]->Velocity += Nodes[i]->Acceleration * dt;
+				Nodes[i]->OldPosition = Nodes[i]->Position;
+				Nodes[i]->Position += Nodes[i]->Velocity * dt;
+			}
 			for (int i = 0; i < Constraints.size(); i++)
 				Constraints[i].SetLambda(0.0f);
 			for (int n = 0; n < Iteration; n++)
 			{
 				for (int i = 0; i < Constraints.size(); i++)
 				{
-					Constraints[i].Solve(dt, Method);
+					Constraints[i].Solve(dt, Method.getId());
 				}
 			}
-		}
-
-		if (Method == PPBD_SS)
-		{
+			for (int i = 0; i < Nodes.size(); i++)
+			{
+				if (Nodes[i]->InvMass == 0.0f)
+					continue;
+				Nodes[i]->Velocity = (Nodes[i]->Position - Nodes[i]->OldPosition) * 1.0 / dt;
+			}
+			break;
+		case XPBD_SS:
+			// only one iteration
+			for (int i = 0; i < Nodes.size(); i++)
+			{
+				if (Nodes[i]->InvMass == 0.0)
+					continue;
+				Nodes[i]->Velocity += Nodes[i]->Acceleration * dt;
+				Nodes[i]->OldPosition = Nodes[i]->Position;
+				Nodes[i]->Position += Nodes[i]->Velocity * dt;
+			}
 			for (int i = 0; i < Constraints.size(); i++)
 			{
-				Constraints[i].Solve(dt, Method);
+				Constraints[i].Solve(dt, Method.getId());
 			}
-		}
+			for (int i = 0; i < Nodes.size(); i++)
+			{
+				if (Nodes[i]->InvMass == 0.0f)
+					continue;
+				Nodes[i]->Velocity = (Nodes[i]->Position - Nodes[i]->OldPosition) * 1.0 / dt;
+			}
+			break;
+			// wait a minute.. it looks like Explicit Euler
+		case Verlet_Integration:
+		case Explicit_Euler:
+		case Semi_Implicit_Euler:
+			// n iterations
+			for (int iter = 0; iter < Iteration; iter++)
+			{
+				// compute force first
+				for (int i = 0; i < Nodes.size(); i++)
+				{
+					if (Nodes[i]->InvMass == 0.0) continue;
+					Nodes[i]->addForce(gravity * 1.0 / Nodes[i]->InvMass / (double)Iteration);
+				}
+				for (int i = 0; i < Springs.size(); i++)
+				{
+					Springs[i]->applyInternalForce(dt);
+				}
 
-		for (int i = 0; i < Nodes.size(); i++)
-		{
-			if (Nodes[i]->InvMass == 0.0f)
-				continue;	
-			Nodes[i]->Velocity = (Nodes[i]->Position - Nodes[i]->OldPosition) * 1.0 / dt;
+				// update the position using integration
+				switch (Method.getId())
+				{
+				// Note: dt = 1/60 won't work with Explicit_Euler, will explode; but 1/600 works
+				case Explicit_Euler:
+					for (int i = 0; i < Nodes.size(); i++)
+					{
+						if (Nodes[i]->InvMass == 0.0) continue;
+						Nodes[i]->Acceleration = Nodes[i]->Force * Nodes[i]->InvMass;
+						glm::vec<3, double> temp = Nodes[i]->Velocity;
+						Nodes[i]->Velocity += Nodes[i]->Acceleration * dt;
+						Nodes[i]->Position += temp * dt;
+					}
+					break;
+				case Semi_Implicit_Euler:
+					for (int i = 0; i < Nodes.size(); i++)
+					{
+						if (Nodes[i]->InvMass == 0.0) continue;
+						Nodes[i]->Acceleration = Nodes[i]->Force * Nodes[i]->InvMass;
+						Nodes[i]->Velocity += Nodes[i]->Acceleration * dt;
+						Nodes[i]->Position += Nodes[i]->Velocity * dt;
+					}
+					break;
+				case Verlet_Integration:
+					for (int i = 0; i < Nodes.size(); i++)
+					{
+						if (Nodes[i]->InvMass == 0.0) continue;
+						glm::vec<3, double> temp = Nodes[i]->Position;
+						Nodes[i]->Acceleration = Nodes[i]->Force * Nodes[i]->InvMass;
+						Nodes[i]->Position += (Nodes[i]->Position - Nodes[i]->OldPosition) + Nodes[i]->Acceleration * dt * dt;
+						Nodes[i]->OldPosition = temp;
+					}
+					break;
+				}
+				// clear the force
+				for (int i = 0; i < Nodes.size(); i++)
+				{
+					Nodes[i]->Force = glm::vec<3, double>(0, 0, 0);
+				}
+			}
+			break;
 		}
 	}
 
@@ -158,8 +235,10 @@ public:
 		for (int i = 0; i < Nodes.size(); i++)
 		{
 			if (Nodes[i]->InvMass == 0) continue;
-			switch (update)
+			if (Method.getId() <= 3)
 			{
+				switch (update)
+				{
 				case VEL_UP:
 					Nodes[i]->Velocity.y += force * Nodes[i]->InvMass;
 					break;
@@ -180,6 +259,33 @@ public:
 					Nodes[i]->Velocity.x += force * Nodes[i]->InvMass;
 					Nodes[i]->Velocity.z -= force * Nodes[i]->InvMass / 50;
 					break;
+				}
+			}
+			else
+			{
+				switch (update)
+				{
+				case VEL_UP:
+					Nodes[i]->Force.y += force * Nodes[i]->InvMass * 10;
+					break;
+				case VEL_DOWN:
+					Nodes[i]->Force.y -= force * Nodes[i]->InvMass * 10;
+					break;
+				case VEL_FRONT:
+					Nodes[i]->Force.z += force * Nodes[i]->InvMass * 10;
+					break;
+				case VEL_BACK:
+					Nodes[i]->Force.z -= force * Nodes[i]->InvMass * 10;
+					break;
+				case VEL_LEFT_AND_UP:
+					Nodes[i]->Force.x -= force * Nodes[i]->InvMass * 10;
+					Nodes[i]->Force.z -= force * Nodes[i]->InvMass / 2.0;
+					break;
+				case VEL_RIGHT_AND_UP:
+					Nodes[i]->Force.x += force * Nodes[i]->InvMass * 10;
+					Nodes[i]->Force.z -= force * Nodes[i]->InvMass / 2.0;
+					break;
+				}
 			}
 		}
 	}
@@ -214,7 +320,44 @@ private:
 			}
 			//std::cout << std::endl;
 		}
-		// printf("Actual cloth has %i nodes\n", Nodes.size());
+		// printf("Actual cloth has %i nodes.\n", Nodes.size());
+
+		if (Method.getId() > 3) // mass-spring system
+		{
+			for (int i = 0; i < NodesInHeight; i++) {
+				for (int j = 0; j < NodesInWidth; j++) {
+					// Structural
+					if (i < NodesInHeight - 1) Springs.push_back(new Spring(getNode(i, j), getNode(i + 1, j), STRUCTURE_COEF));
+					if (j < NodesInWidth - 1) Springs.push_back(new Spring(getNode(i, j), getNode(i, j + 1), STRUCTURE_COEF));
+					// Shear 
+					if (i < NodesInHeight - 1 && j < NodesInWidth - 1)
+					{
+						Springs.push_back(new Spring(getNode(i, j), getNode(i + 1, j + 1), SHEAR_COEF));
+						Springs.push_back(new Spring(getNode(i + 1, j), getNode(i, j + 1), SHEAR_COEF));
+					}
+					// Bending
+					if (i < NodesInHeight - 2) Springs.push_back(new Spring(getNode(i, j), getNode(i + 2, j), BENDING_COEF));
+					if (j < NodesInWidth - 2) Springs.push_back(new Spring(getNode(i, j), getNode(i, j + 2), BENDING_COEF));
+				}
+			}
+			//for (int i = 0; i < NodesInWidth; i++) {
+			//	for (int j = 0; j < NodesInHeight; j++) {
+			//		// Structural
+			//		if (i < NodesInWidth - 1) Springs.push_back(new Spring(getNode(i, j), getNode(i + 1, j), STRUCTURE_COEF));
+			//		if (j < NodesInHeight - 1) Springs.push_back(new Spring(getNode(i, j), getNode(i, j + 1), STRUCTURE_COEF));
+			//		// Shear 
+			//		if (i < NodesInWidth - 1 && j < NodesInHeight - 1)
+			//		{
+			//			Springs.push_back(new Spring(getNode(i, j), getNode(i + 1, j + 1), SHEAR_COEF));
+			//			Springs.push_back(new Spring(getNode(i + 1, j), getNode(i, j + 1), SHEAR_COEF));
+			//		}
+			//		// Bending
+			//		if (i < NodesInWidth - 2) Springs.push_back(new Spring(getNode(i, j), getNode(i + 2, j), BENDING_COEF));
+			//		if (j < NodesInHeight - 2) Springs.push_back(new Spring(getNode(i, j), getNode(i, j + 2), BENDING_COEF));
+			//	}
+			//}
+			printf("Cloth has %i springs.\n", Springs.size());
+		}
 	}
 
 	void initFaces()
@@ -249,7 +392,7 @@ private:
 				// Each edges have a distance constraint
 				if (w < NodesInWidth - 1) { MakeConstraint(getNode(w, h), getNode(w + 1, h), DISTANCE_COMPLIANCE); }
 				if (h < NodesInHeight - 1) { MakeConstraint(getNode(w, h), getNode(w, h + 1), DISTANCE_COMPLIANCE); }
-				if (w + 1 < NodesInWidth && h + 1< NodesInHeight)
+				if (w + 1 < NodesInWidth && h + 1 < NodesInHeight)
 				{
 					MakeConstraint(getNode(w + 1, h), getNode(w, h + 1), DISTANCE_COMPLIANCE);
 					MakeConstraint(getNode(w, h), getNode(w + 1, h + 1), DISTANCE_COMPLIANCE);
@@ -290,8 +433,10 @@ private:
 	void Destroy()
 	{
 		for (int i = 0; i < Nodes.size(); i++) { delete Nodes[i]; }
+		for (int i = 0; i < Springs.size(); i++) { delete Springs[i]; }
 		Nodes.clear();
 		Faces.clear();
+		Springs.clear();
 		Constraints.clear();
 	}
 };
